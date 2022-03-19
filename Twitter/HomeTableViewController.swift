@@ -11,19 +11,22 @@ import UIKit
 class HomeTableViewController: UITableViewController {
     var tweetsArray = [NSDictionary]()
     var numOfTweets: Int!
+    let myRefresher = UIRefreshControl()
     
-    func loadTweet() {
+    @objc func loadTweet() {
         let contentUrl = "https://api.twitter.com/1.1/statuses/home_timeline.json"
         let params = ["count": 10]
         
         TwitterAPICaller.client?.getDictionariesRequest(url: contentUrl, parameters: params, success:
-        {(tweets: [NSDictionary]) in self.tweetsArray.removeAll()
+        {(tweets: [NSDictionary]) in
+            self.tweetsArray.removeAll()
             for tweet in tweets {
                 self.tweetsArray.append(tweet)
             }
             self.tableView.reloadData()
+            self.myRefresher.endRefreshing()
             
-        }, failure: { (Error) in print("could not retrieve tweets")})
+        }, failure: { (error) in print(error.localizedDescription)})
     }
     
     
@@ -35,12 +38,21 @@ class HomeTableViewController: UITableViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         loadTweet()
+        myRefresher.addTarget(self, action: #selector(loadTweet), for: .valueChanged)
+        self.tableView.refreshControl = myRefresher
+        self.tableView.rowHeight = UITableView.automaticDimension
+        self.tableView.estimatedRowHeight = 150
 
         // Uncomment the following line to preserve selection between presentations
         // self.clearsSelectionOnViewWillAppear = false
 
         // Uncomment the following line to display an Edit button in the navigation bar for this view controller.
         // self.navigationItem.rightBarButtonItem = self.editButtonItem
+    }
+    
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+        loadTweet()
     }
     
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
@@ -56,6 +68,8 @@ class HomeTableViewController: UITableViewController {
         if let imageData = data {
             cell.profileImage.image = UIImage(data: imageData)
         }
+        cell.setFavorite(tweetsArray[indexPath.row]["favorited"] as! Bool)
+        cell.tweetId = tweetsArray[indexPath.row]["id"] as! Int
         return cell
     }
 
